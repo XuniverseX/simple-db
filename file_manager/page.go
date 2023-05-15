@@ -35,8 +35,8 @@ func Uint64ToByteArray(val uint64) []byte {
 }
 
 func (p *Page) GetBytes(offset uint64) []byte {
-	len := binary.LittleEndian.Uint64(p.buffer[offset : offset+8]) //偏移量处的字节表示后面字节数组的length
-	newBuf := make([]byte, len)
+	length := binary.LittleEndian.Uint64(p.buffer[offset : offset+8]) //偏移量处的字节表示后面字节数组的length
+	newBuf := make([]byte, length)
 	copy(newBuf, p.buffer[offset+8:])
 	return newBuf
 }
