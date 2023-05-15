@@ -16,7 +16,7 @@ type LogManager struct {
 	logPage      *fm.Page    //存储日志的缓冲区
 	currentBlk   *fm.BlockId //日志当前写入的区块号
 	latestLsn    uint64      //当前最新日志编号
-	lastSavedLsg uint64      //上一次写入磁盘的日志编号
+	lastSavedLsn uint64      //上一次写入磁盘的日志编号
 	mu           sync.Mutex
 }
 
@@ -28,7 +28,7 @@ func (l *LogManager) appendNewBlock() (*fm.BlockId, error) {
 	}
 
 	//日志写入是从底向上写，先在头8字节写入缓冲区大小
-	l.logPage.SetInt(0, uint64(l.fileManager.BlockSize())) //缓冲区大小
+	l.logPage.SetInt(0, l.fileManager.BlockSize()) //缓冲区大小
 	l.fileManager.Write(&blk, l.logPage)
 
 	return &blk, nil
@@ -40,7 +40,7 @@ func NewLogManager(fileManager *fm.FileManager, logFile string) (*LogManager, er
 		logFile:      logFile,
 		logPage:      fm.NewPageBySize(fileManager.BlockSize()),
 		latestLsn:    0,
-		lastSavedLsg: 0,
+		lastSavedLsn: 0,
 	}
 
 	logSize, err := fileManager.Size(logFile)
@@ -68,13 +68,13 @@ func NewLogManager(fileManager *fm.FileManager, logFile string) (*LogManager, er
 // FlushByLSN 把给定编号及之前的数据写入磁盘 LSN -> log sequence number
 func (l *LogManager) FlushByLSN(lsn uint64) error {
 	// 除了该日志编号之前的数据，当前区块的日志也会被写入磁盘
-	if lsn > l.lastSavedLsg {
+	if lsn > l.lastSavedLsn {
 		err := l.Flush()
 		if err != nil {
 			return err
 		}
 
-		l.lastSavedLsg = lsn
+		l.lastSavedLsn = lsn
 	}
 	return nil
 }
