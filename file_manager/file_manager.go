@@ -131,7 +131,7 @@ func (f *FileManager) Append(fileName string) (BlockId, error) {
 	}
 
 	b := make([]byte, f.blockSize)
-	_, err = file.WriteAt(b, int64(blk.Number()*f.blockSize))
+	_, err = file.WriteAt(b, int64(blk.Number()*f.blockSize)) //在文件末尾写入新区块
 	if err != nil {
 		return BlockId{}, err
 	}

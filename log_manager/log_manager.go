@@ -89,8 +89,9 @@ func (l *LogManager) Flush() error {
 	return nil
 }
 
+// Append 添加日志
 func (l *LogManager) Append(logRecord []byte) (uint64, error) {
-	boundary := l.logPage.GetInt(0) //获取当前可写入偏移
+	boundary := l.logPage.GetInt(0) //获取可写入的底部偏移
 	recordSize := uint64(len(logRecord))
 	bytesNeed := recordSize + UINT64_LEN
 
@@ -101,7 +102,7 @@ func (l *LogManager) Append(logRecord []byte) (uint64, error) {
 			return l.latestLsn, err
 		}
 
-		// 分配新空间用于写入新数据
+		//生成新区块用于写入新数据
 		l.currentBlk, err = l.appendNewBlock()
 		if err != nil {
 			return l.latestLsn, err
@@ -110,15 +111,16 @@ func (l *LogManager) Append(logRecord []byte) (uint64, error) {
 		boundary = l.logPage.GetInt(0) //获取appendNewBlock()新写入的偏移值
 	}
 
-	recordPos := boundary - bytesNeed
+	recordPos := boundary - bytesNeed //从底部往上写入
 	l.logPage.SetBytes(recordPos, logRecord)
 	l.logPage.SetInt(0, recordPos) //重新设置可写入偏移
-	l.latestLsn++
+	l.latestLsn++                  //记录新加入日志的编号
 
 	return l.latestLsn, nil
 }
 
 func (l *LogManager) Iterator() *LogIterator {
+	//生成日志遍历器
 	l.Flush()
 	return NewLogIterator(l.fileManager, l.currentBlk)
 }
