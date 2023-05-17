@@ -29,7 +29,7 @@ func (l *LogManager) appendNewBlock() (*fm.BlockId, error) {
 
 	//日志写入是从底向上写，先在头8字节写入缓冲区大小
 	l.logPage.SetInt(0, l.fileManager.BlockSize()) //缓冲区大小
-	l.fileManager.Write(&blk, l.logPage)
+	l.fileManager.Write(&blk, l.logPage)           //TODO: 此处写入时会写入旧Page的数据
 
 	return &blk, nil
 }

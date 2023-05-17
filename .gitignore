@@ -25,3 +25,4 @@ go.work
 file_test
 logtest
 buffertest
+record_test

@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+const (
+	DIR          = "log_test"
+	LOG_FILENAME = "logfile"
+)
+
 func makeRecord(s string, n uint64) []byte {
 	//生成日志内容
 	p := fm.NewPageBySize(1)
@@ -27,8 +32,8 @@ func createRecords(lm *LogManager, start uint64, end uint64) {
 }
 
 func TestLogManager(t *testing.T) {
-	fileManager, _ := fm.NewFileManager("logtest", 400)
-	logManager, err := NewLogManager(fileManager, "logfile")
+	fileManager, _ := fm.NewFileManager(DIR, 400)
+	logManager, err := NewLogManager(fileManager, LOG_FILENAME)
 	require.Nil(t, err)
 
 	createRecords(logManager, 1, 35)

@@ -20,7 +20,7 @@ func NewLogIterator(fileManager *fm.FileManager, blk *fm.BlockId) *LogIterator {
 	}
 
 	it.p = fm.NewPageBySize(fileManager.BlockSize())
-	err := it.moveToBlock(blk)
+	err := it.moveToMem(blk)
 	if err != nil {
 		return nil
 	}
@@ -29,7 +29,7 @@ func NewLogIterator(fileManager *fm.FileManager, blk *fm.BlockId) *LogIterator {
 }
 
 // 将对应区块的数据从磁盘读入内存
-func (l *LogIterator) moveToBlock(blk *fm.BlockId) error {
+func (l *LogIterator) moveToMem(blk *fm.BlockId) error {
 	_, err := l.fileManager.Read(blk, l.p)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (l *LogIterator) Next() []byte {
 	//先读取最新日志，也就是编号大的
 	if l.currentPos == l.fileManager.BlockSize() {
 		l.blk = fm.NewBlockId(l.blk.FileName(), l.blk.Number()-1)
-		l.moveToBlock(l.blk)
+		l.moveToMem(l.blk)
 	}
 
 	record := l.p.GetBytes(l.currentPos)
