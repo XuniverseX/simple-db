@@ -2,21 +2,22 @@ package tx
 
 import (
 	fm "file_manager"
+	"math"
 )
 
 type TransactionInterface interface {
-	Commit()
-	Rollback()
-	Recover()
-	Pin(blk *fm.BlockId)
+	Commit() error
+	Rollback() error
+	Recover() error
+	Pin(blk *fm.BlockId) error
 	Unpin(blk *fm.BlockId)
-	GetInt(blk *fm.BlockId, offset uint64) uint64
-	GetString(blk *fm.BlockId, offset uint64) string
-	SetInt(blk *fm.BlockId, offset uint64, val uint64, okToLog bool)
-	SetString(blk *fm.BlockId, offset uint64, val string, okToLog bool)
-	Available() uint64
-	Size(filename string) uint64
-	Append(filename string) *fm.BlockId
+	GetInt(blk *fm.BlockId, offset uint64) (int64, error)
+	SetInt(blk *fm.BlockId, offset uint64, val int64, okToLog bool) error
+	GetString(blk *fm.BlockId, offset uint64) (string, error)
+	SetString(blk *fm.BlockId, offset uint64, val string, okToLog bool) error
+	AvailableBuffers() uint64
+	Size(filename string) (uint64, error)
+	Append(filename string) (*fm.BlockId, error)
 	BlockSize() uint64
 }
 
@@ -33,6 +34,7 @@ const (
 
 const (
 	UINT64_LENGTH = 8
+	END_OF_FILE   = math.MaxUint64
 )
 
 type LogRecordInterface interface {

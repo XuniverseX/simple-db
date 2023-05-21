@@ -21,7 +21,7 @@ func (c *CheckpointRecord) TxNumber() uint64 {
 	return math.MaxUint64 //它没有对应的交易号
 }
 
-func (c *CheckpointRecord) Undo() {}
+func (c *CheckpointRecord) Undo(tx TransactionInterface) {}
 
 func (c *CheckpointRecord) ToString() string {
 	return "<CHECKPOINT>"

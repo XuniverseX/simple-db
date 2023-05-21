@@ -4,7 +4,7 @@ import (
 	fm "file_manager"
 )
 
-// LogIterator用于遍历区块内的日志，日志从底部王往上写，遍历自上而下读取
+// LogIterator 用于遍历区块内的日志，日志从底部王往上写，遍历自上而下读取
 type LogIterator struct {
 	fileManager *fm.FileManager
 	blk         *fm.BlockId

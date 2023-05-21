@@ -1,6 +1,8 @@
 module log_manager
 
-replace file_manager => ../file_manager
+replace (
+	file_manager => ../file_manager
+)
 
 go 1.19
 

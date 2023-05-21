@@ -19,18 +19,19 @@ type BufferManager struct {
 }
 
 func NewBufferManager(fileManager *fm.FileManager, logManager *lm.LogManager, bufferSize uint32) *BufferManager {
-	bm := &BufferManager{
+	bufferManager := &BufferManager{
 		available: bufferSize,
 	}
 
 	for i := uint32(0); i < bufferSize; i++ {
 		buff := NewBuffer(fileManager, logManager)
-		bm.bufferPool = append(bm.bufferPool, buff)
+		bufferManager.bufferPool = append(bufferManager.bufferPool, buff)
 	}
 
-	return bm
+	return bufferManager
 }
 
+// Available 当前可用缓存页面数量
 func (bm *BufferManager) Available() uint32 {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
@@ -39,15 +40,17 @@ func (bm *BufferManager) Available() uint32 {
 }
 
 // FlushAll 将给定事务号的缓存全部写入磁盘
-func (bm *BufferManager) FlushAll(txNum int32) {
+func (bm *BufferManager) FlushAll(txNum int32) error {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 
 	for _, buff := range bm.bufferPool {
-		if buff.txNum == txNum {
+		if buff.ModifyingTx() == txNum {
 			buff.Flush()
 		}
 	}
+
+	return nil
 }
 
 // Pin 将给定区块数据分配给缓存页面
@@ -56,12 +59,12 @@ func (bm *BufferManager) Pin(blk *fm.BlockId) (*Buffer, error) {
 	defer bm.mu.Unlock()
 
 	start := time.Now()
-	buff := bm.tryPin(blk) //尝试分配缓存
+	buff, _ := bm.tryPin(blk) //尝试分配缓存
 
 	for buff == nil && !bm.waitingTooLong(start) {
 		//如果无法分配到缓存，等待一段时间再尝试
 		time.Sleep(MAX_WAITTIME * time.Second)
-		buff = bm.tryPin(blk)
+		buff, _ = bm.tryPin(blk)
 		if buff == nil {
 			return nil, errors.New("no buffer available, care for dead lock")
 		}
@@ -93,14 +96,14 @@ func (bm *BufferManager) waitingTooLong(start time.Time) bool {
 	return false
 }
 
-func (bm *BufferManager) tryPin(blk *fm.BlockId) *Buffer {
+func (bm *BufferManager) tryPin(blk *fm.BlockId) (*Buffer, error) {
 	//看看给定区块是否已经读入某个页面
 	buff := bm.findExistingBuffer(blk)
 	if buff == nil {
 		//查看是否还有可用缓存页面
 		buff = bm.chooseUnpinBuffer()
 		if buff == nil {
-			return nil
+			return nil, errors.New("no available buffer")
 		}
 		buff.AssignToBlock(blk)
 	}
@@ -110,7 +113,7 @@ func (bm *BufferManager) tryPin(blk *fm.BlockId) *Buffer {
 	}
 
 	buff.Pin()
-	return buff
+	return buff, nil
 }
 
 func (bm *BufferManager) findExistingBuffer(blk *fm.BlockId) *Buffer {

@@ -1,15 +1,18 @@
 module tx
 
-replace file_manager => ../file_manager
 
-replace log_manager => ../log_manager
-
+replace (
+	file_manager => ../file_manager
+	log_manager => ../log_manager
+	buffer_manager => ../buffer_manager
+)
 go 1.19
 
 require (
 	file_manager v0.0.0
 	github.com/stretchr/testify v1.8.2
 	log_manager v0.0.0
+	buffer_manager v0.0.0
 )
 
 require (

@@ -19,6 +19,7 @@ func NewBuffer(fileManager *fm.FileManager, logManager *lm.LogManager) *Buffer {
 	return &Buffer{
 		fileManager: fileManager,
 		logManager:  logManager,
+		txNum:       -1,
 		contents:    fm.NewPageBySize(fileManager.BlockSize()),
 	}
 }
@@ -56,11 +57,13 @@ func (b *Buffer) AssignToBlock(blk *fm.BlockId) {
 }
 
 func (b *Buffer) Flush() {
-	if b.txNum > 0 {
-		b.logManager.FlushByLSN(b.lsn)           //为以后的系统崩溃提供支持
-		b.fileManager.Write(b.blk, b.Contents()) //将已经修改的数据写回磁盘
-		b.txNum = -1
+	if b.txNum < 0 {
+		return
 	}
+
+	b.logManager.FlushByLSN(b.lsn)           //为以后的系统崩溃提供支持
+	b.fileManager.Write(b.blk, b.Contents()) //将已经修改的数据写回磁盘
+	b.txNum = -1
 }
 
 // Pin 增加缓存页面引用计数

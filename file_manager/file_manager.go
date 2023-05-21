@@ -105,14 +105,14 @@ func (f *FileManager) Write(blk *BlockId, p *Page) (int, error) {
 func (f *FileManager) Size(fileName string) (uint64, error) {
 	file, err := f.getFile(fileName)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	return uint64(fi.Size()) / f.blockSize, nil

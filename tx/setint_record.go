@@ -48,7 +48,7 @@ func (s *SetIntRecord) ToString() string {
 
 func (s *SetIntRecord) Undo(tx TransactionInterface) {
 	tx.Pin(s.blk)
-	tx.SetInt(s.blk, s.offset, s.val, false) //将原来的数字写回去
+	tx.SetInt(s.blk, s.offset, int64(s.val), false) //将原来的数字写回去
 	tx.Unpin(s.blk)
 }
 
