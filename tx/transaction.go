@@ -24,7 +24,7 @@ func nextTxNum() int32 {
 }
 
 type Transaction struct {
-	//concurManager  *ConcurrentMgr
+	concurManager   *ConcurrencyManager
 	recoveryManager *RecoveryManager
 	fileManager     *fm.FileManager
 	logManager      *lm.LogManager
@@ -43,7 +43,8 @@ func NewTransaction(fMgr *fm.FileManager, lMgr *lm.LogManager, bMgr *bm.BufferMa
 		txNum:         txNum,
 	}
 
-	//TODO 创建同步管理器
+	//创建同步管理器
+	tx.concurManager = NewConcurrencyManager()
 
 	//创建恢复管理器
 	tx.recoveryManager = NewRecoveryManager(lMgr, bMgr, tx, txNum)
@@ -52,6 +53,8 @@ func NewTransaction(fMgr *fm.FileManager, lMgr *lm.LogManager, bMgr *bm.BufferMa
 }
 
 func (t *Transaction) Commit() error {
+	//释放同步管理器
+	t.concurManager.Release()
 	//调用恢复管理器执行commit
 	err := t.recoveryManager.Commit()
 	if err != nil {
@@ -61,13 +64,13 @@ func (t *Transaction) Commit() error {
 	r := fmt.Sprintf("transaction %d committed", t.txNum)
 	fmt.Println(r)
 
-	//TODO 释放同步管理器
-
 	t.bufferList.UnpinAll()
 	return nil
 }
 
 func (t *Transaction) Rollback() error {
+	//释放同步管理器
+	t.concurManager.Release()
 	//调用恢复管理器rollback
 	err := t.recoveryManager.Rollback()
 	if err != nil {
@@ -75,8 +78,6 @@ func (t *Transaction) Rollback() error {
 	}
 	r := fmt.Sprintf("transation %d roll back", t.txNum)
 	fmt.Println(r)
-
-	//TODO 释放同步管理器
 
 	t.bufferList.UnpinAll()
 	return nil
@@ -108,6 +109,10 @@ func (t *Transaction) bufferNotExistError(blk *fm.BlockId) error {
 }
 
 func (t *Transaction) GetInt(blk *fm.BlockId, offset uint64) (int64, error) {
+	err := t.concurManager.SLock(blk)
+	if err != nil {
+		return -1, err
+	}
 	buff := t.bufferList.getBuffer(blk)
 	if buff == nil {
 		return -1, t.bufferNotExistError(blk)
@@ -118,10 +123,10 @@ func (t *Transaction) GetInt(blk *fm.BlockId, offset uint64) (int64, error) {
 
 func (t *Transaction) SetInt(blk *fm.BlockId, offset uint64, val int64, okToLog bool) error {
 	//调用同步管理器加x锁
-	//err := t.concurManager.XLock(blk)
-	//if err != nil {
-	//	return err
-	//}
+	err := t.concurManager.XLock(blk)
+	if err != nil {
+		return err
+	}
 
 	buff := t.bufferList.getBuffer(blk)
 	if buff == nil {
@@ -129,7 +134,6 @@ func (t *Transaction) SetInt(blk *fm.BlockId, offset uint64, val int64, okToLog 
 	}
 
 	var lsn uint64
-	var err error
 
 	if okToLog {
 		lsn, err = t.recoveryManager.SetInt(buff, offset)
@@ -147,10 +151,10 @@ func (t *Transaction) SetInt(blk *fm.BlockId, offset uint64, val int64, okToLog 
 
 func (t *Transaction) GetString(blk *fm.BlockId, offset uint64) (string, error) {
 	//调用同步管理器加s锁
-	//err := t.concur_mgr.SLock(blk)
-	//if err != nil {
-	//	return "", err
-	//}
+	err := t.concurManager.SLock(blk)
+	if err != nil {
+		return "", err
+	}
 
 	buff := t.bufferList.getBuffer(blk)
 	if buff == nil {
@@ -162,10 +166,10 @@ func (t *Transaction) GetString(blk *fm.BlockId, offset uint64) (string, error) 
 
 func (t *Transaction) SetString(blk *fm.BlockId, offset uint64, val string, okToLog bool) error {
 	//使用同步管理器加x锁
-	//err := t.concur_mgr.XLock(blk)
-	//if err != nil {
-	//	return err
-	//}
+	err := t.concurManager.XLock(blk)
+	if err != nil {
+		return err
+	}
 
 	buff := t.bufferList.getBuffer(blk)
 	if buff == nil {
@@ -173,7 +177,6 @@ func (t *Transaction) SetString(blk *fm.BlockId, offset uint64, val string, okTo
 	}
 
 	var lsn uint64
-	var err error
 
 	if okToLog {
 		//调用恢复管理器SetString方法
@@ -196,11 +199,11 @@ func (t *Transaction) AvailableBuffers() uint64 {
 
 func (t *Transaction) Size(filename string) (uint64, error) {
 	//调用同步管理器加S锁
-	//dummy_blk := fm.NewBlockId(file_name, uint64(END_OF_FILE))
-	//err := t.concur_mgr.SLock(dummy_blk)
-	//if err != nil {
-	//	return 0, err
-	//}
+	dummyBlk := fm.NewBlockId(filename, uint64(END_OF_FILE))
+	err := t.concurManager.SLock(dummyBlk)
+	if err != nil {
+		return 0, err
+	}
 
 	size, err := t.fileManager.Size(filename)
 	if err != nil {
@@ -212,11 +215,11 @@ func (t *Transaction) Size(filename string) (uint64, error) {
 
 func (t *Transaction) Append(filename string) (*fm.BlockId, error) {
 	//调用同步管理器加X锁
-	//dummy_blk := fm.NewBlockId(file_name, END_OF_FILE)
-	//err := t.concur_mgr.XLock(dummy_blk)
-	//if err != nil {
-	//	return nil, err
-	//}
+	dummyBlk := fm.NewBlockId(filename, END_OF_FILE)
+	err := t.concurManager.XLock(dummyBlk)
+	if err != nil {
+		return nil, err
+	}
 
 	blk, err := t.fileManager.Append(filename)
 	if err != nil {
