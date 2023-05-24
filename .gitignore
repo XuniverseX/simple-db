@@ -22,7 +22,8 @@ go.work
 
 .idea
 .DS_Store
-file_test
-logtest
-buffertest
+/file_manager/file_test/
+/log_manager/logtest/
+/buffer_manager/buffertest/
 record_test
+/record_manager/recordtest/

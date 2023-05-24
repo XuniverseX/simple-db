@@ -32,7 +32,7 @@ func NewSetStringRecord(p *fm.Page) *SetStringRecord {
 	txNum := p.GetInt(tPos)
 	fPos := tPos + UINT64_LENGTH
 	filename := p.GetString(fPos)
-	bPos := fPos + p.MaxLengthOfString(filename)
+	bPos := fPos + fm.MaxLengthOfStringInPage(filename)
 	blkNum := p.GetInt(bPos)
 	blk := fm.NewBlockId(filename, blkNum)
 	oPos := bPos + UINT64_LENGTH
@@ -72,14 +72,13 @@ func WriteSetStringLog(logManager *lm.LogManager, txNum uint64,
 	blk *fm.BlockId, offset uint64, val string) (uint64, error) {
 	tPos := uint64(UINT64_LENGTH)
 	fPos := tPos + UINT64_LENGTH
-	p := fm.NewPageBySize(1) //用于调用MaxLengthOfString()
-	bPos := fPos + p.MaxLengthOfString(blk.FileName())
+	bPos := fPos + fm.MaxLengthOfStringInPage(blk.FileName())
 	oPos := bPos + UINT64_LENGTH
 	vPos := oPos + UINT64_LENGTH
-	recLen := vPos + p.MaxLengthOfString(val)
+	recLen := vPos + fm.MaxLengthOfStringInPage(val)
 	rec := make([]byte, recLen)
 
-	p = fm.NewPageByBytes(rec)
+	p := fm.NewPageByBytes(rec)
 	p.SetInt(0, uint64(SETSTRING))
 	p.SetInt(tPos, txNum)
 	p.SetString(fPos, blk.FileName())

@@ -18,7 +18,7 @@ func NewSetIntRecord(p *fm.Page) *SetIntRecord {
 	txNum := p.GetInt(tPos)
 	fPos := tPos + UINT64_LENGTH
 	filename := p.GetString(fPos)
-	bPos := fPos + p.MaxLengthOfString(filename)
+	bPos := fPos + fm.MaxLengthOfStringInPage(filename)
 	blkNum := p.GetInt(bPos)
 	blk := fm.NewBlockId(filename, blkNum)
 	opos := bPos + UINT64_LENGTH
@@ -57,14 +57,13 @@ func WriteSetIntLog(logManager *lg.LogManager, txNum uint64,
 
 	tPos := uint64(UINT64_LENGTH)
 	fPos := tPos + UINT64_LENGTH
-	p := fm.NewPageBySize(1)
-	bPos := fPos + p.MaxLengthOfString(blk.FileName())
+	bPos := fPos + fm.MaxLengthOfStringInPage(blk.FileName())
 	opos := bPos + UINT64_LENGTH
 	vPos := opos + UINT64_LENGTH
 	recLen := vPos + UINT64_LENGTH
 	rec := make([]byte, recLen)
 
-	p = fm.NewPageByBytes(rec)
+	p := fm.NewPageByBytes(rec)
 	p.SetInt(0, uint64(SETINT))
 	p.SetInt(tPos, txNum)
 	p.SetString(fPos, blk.FileName())

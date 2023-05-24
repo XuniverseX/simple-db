@@ -59,7 +59,7 @@ func (p *Page) SetString(offset uint64, s string) {
 	p.SetBytes(offset, strBytes)
 }
 
-func (p *Page) MaxLengthOfString(s string) uint64 {
+func MaxLengthOfStringInPage(s string) uint64 {
 	bs := []byte(s)
 	return uint64(8 + len(bs)) //字节数组长度+字符串真实长度
 }

@@ -14,10 +14,9 @@ const (
 
 func makeRecord(s string, n uint64) []byte {
 	//生成日志内容
-	p := fm.NewPageBySize(1)
-	nPos := p.MaxLengthOfString(s)
+	nPos := fm.MaxLengthOfStringInPage(s)
 	b := make([]byte, nPos+UINT64_LEN)
-	p = fm.NewPageByBytes(b)
+	p := fm.NewPageByBytes(b)
 	p.SetString(0, s)
 	p.SetInt(nPos, n)
 
@@ -46,7 +45,7 @@ func TestLogManager(t *testing.T) {
 		s := p.GetString(0)
 		require.Equal(t, fmt.Sprintf("record%d", recNum), s)
 
-		nPos := p.MaxLengthOfString(s)
+		nPos := fm.MaxLengthOfStringInPage(s)
 		val := p.GetInt(nPos)
 		require.Equal(t, recNum, val)
 
@@ -64,7 +63,7 @@ func TestLogManager(t *testing.T) {
 		s := p.GetString(0)
 		require.Equal(t, fmt.Sprintf("record%d", recNum), s)
 
-		nPos := p.MaxLengthOfString(s)
+		nPos := fm.MaxLengthOfStringInPage(s)
 		val := p.GetInt(nPos)
 		require.Equal(t, recNum, val)
 
