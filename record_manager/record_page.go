@@ -19,11 +19,14 @@ type RecordPage struct {
 }
 
 func NewRecordPage(tx *tx.Transaction, blk *fm.BlockId, layout LayoutInterface) *RecordPage {
-	return &RecordPage{
+	rp := &RecordPage{
 		tx:     tx,
 		blk:    blk,
 		layout: layout,
 	}
+	tx.Pin(blk)
+
+	return rp
 }
 
 func (r *RecordPage) Block() *fm.BlockId {
@@ -57,17 +60,18 @@ func (r *RecordPage) SetString(slot int, fieldName string, val string) {
 }
 
 func (r *RecordPage) Format() {
-	for slot := 0; r.isValidSlot(slot); slot++ {
-		slotOff := r.slotOffset(slot)
-		r.tx.SetInt(r.blk, slotOff, int64(EMPTY), false)
+	slot := 0
+	for r.isValidSlot(slot) {
+		r.tx.SetInt(r.blk, r.slotOffset(slot), int64(EMPTY), false)
 		sch := r.layout.Schema()
 		for _, fieldName := range sch.Fields() {
-			fldPos := slotOff + uint64(r.layout.Offset(fieldName))
+			fldPos := r.slotOffset(slot) + uint64(r.layout.Offset(fieldName))
 			if sch.Type(fieldName) == INTEGER {
 				r.tx.SetInt(r.blk, fldPos, 0, false)
 			} else {
 				r.tx.SetString(r.blk, fldPos, "", false)
 			}
+			slot++
 		}
 	}
 }
@@ -76,7 +80,7 @@ func (r *RecordPage) Delete(slot int) {
 	r.setFlag(slot, EMPTY)
 }
 
-func (r *RecordPage) ValidAfterSlot(slot int) int {
+func (r *RecordPage) InsertAfter(slot int) int {
 	newSlot := r.searchAfter(slot, EMPTY)
 	if newSlot >= 0 {
 		r.setFlag(newSlot, USED)
@@ -84,7 +88,7 @@ func (r *RecordPage) ValidAfterSlot(slot int) int {
 	return newSlot
 }
 
-func (r *RecordPage) InvalidAfterSlot(slot int) int {
+func (r *RecordPage) NextAfter(slot int) int {
 	return r.searchAfter(slot, USED)
 }
 
@@ -102,11 +106,16 @@ func (r *RecordPage) isValidSlot(slot int) bool {
 
 func (r *RecordPage) searchAfter(slot int, flag SLOT_FLAG) int {
 	slot++
-	for ; r.isValidSlot(slot); slot++ {
-		val, _ := r.tx.GetInt(r.blk, r.slotOffset(slot))
+	for r.isValidSlot(slot) {
+		val, err := r.tx.GetInt(r.blk, r.slotOffset(slot))
+		if err != nil {
+			panic(err)
+		}
+
 		if SLOT_FLAG(val) == flag {
 			return slot
 		}
+		slot++
 	}
 
 	return -1

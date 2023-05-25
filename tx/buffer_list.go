@@ -7,21 +7,21 @@ import (
 
 // BufferList 管理当前被Pin的内存页面
 type BufferList struct {
-	buffers       map[*fm.BlockId]*bm.Buffer
+	buffers       map[fm.BlockId]*bm.Buffer
 	bufferManager *bm.BufferManager
-	pins          []*fm.BlockId
+	pins          []fm.BlockId
 }
 
 func NewBufferList(bufferManager *bm.BufferManager) *BufferList {
 	return &BufferList{
-		buffers:       make(map[*fm.BlockId]*bm.Buffer),
+		buffers:       make(map[fm.BlockId]*bm.Buffer),
 		bufferManager: bufferManager,
-		pins:          make([]*fm.BlockId, 0),
+		pins:          make([]fm.BlockId, 0),
 	}
 }
 
 func (b *BufferList) getBuffer(blk *fm.BlockId) *bm.Buffer {
-	buff := b.buffers[blk]
+	buff, _ := b.buffers[*blk]
 	return buff
 }
 
@@ -32,14 +32,14 @@ func (b *BufferList) Pin(blk *fm.BlockId) error {
 		return err
 	}
 
-	b.buffers[blk] = buff
-	b.pins = append(b.pins, blk)
+	b.buffers[*blk] = buff
+	b.pins = append(b.pins, *blk)
 
 	return nil
 }
 
 func (b *BufferList) Unpin(blk *fm.BlockId) {
-	buff, ok := b.buffers[blk]
+	buff, ok := b.buffers[*blk]
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (b *BufferList) Unpin(blk *fm.BlockId) {
 		}
 	}
 
-	delete(b.buffers, blk) //从map中删除
+	delete(b.buffers, *blk) //从map中删除
 }
 
 func (b *BufferList) UnpinAll() {
@@ -62,6 +62,6 @@ func (b *BufferList) UnpinAll() {
 		b.bufferManager.Unpin(buff)
 	}
 
-	b.buffers = make(map[*fm.BlockId]*bm.Buffer)
-	b.pins = make([]*fm.BlockId, 0)
+	b.buffers = make(map[fm.BlockId]*bm.Buffer)
+	b.pins = make([]fm.BlockId, 0)
 }

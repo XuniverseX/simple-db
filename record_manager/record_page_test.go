@@ -34,7 +34,7 @@ func TestRecordPageInsertAndDelete(t *testing.T) {
 	rp := NewRecordPage(tx1, blk, layout)
 	rp.Format()
 	fmt.Println("Filling the page with random records")
-	slot := rp.ValidAfterSlot(-1) //找到第一条可用插槽
+	slot := rp.InsertAfter(-1) //找到第一条可用插槽
 	valForFieldA := make([]int, 0)
 	for slot >= 0 {
 		n := rand.Intn(50)
@@ -42,21 +42,21 @@ func TestRecordPageInsertAndDelete(t *testing.T) {
 		rp.SetInt(slot, "A", n)                          //找到可用插槽后随机设定字段A的值
 		rp.SetString(slot, "B", fmt.Sprintf("rec%d", n)) //设定字段B
 		fmt.Printf("inserting into slot%d {%d , rec%d}\n", slot, n, n)
-		slot = rp.ValidAfterSlot(slot) //查找当前插槽之后可用的插槽
+		slot = rp.InsertAfter(slot) //查找当前插槽之后可用的插槽
 	}
 
-	slot = rp.InvalidAfterSlot(-1) //测试插入字段是否正确
+	slot = rp.NextAfter(-1) //测试插入字段是否正确
 	for slot >= 0 {
 		a := rp.GetInt(slot, "A")
 		b := rp.GetString(slot, "B")
 		require.Equal(t, a, valForFieldA[slot])
 		require.Equal(t, b, fmt.Sprintf("rec%d", a))
-		slot = rp.InvalidAfterSlot(slot)
+		slot = rp.NextAfter(slot)
 	}
 
 	fmt.Println("Deleted these records with A-values < 25.")
 	count := 0
-	slot = rp.InvalidAfterSlot(-1)
+	slot = rp.NextAfter(-1)
 	for slot >= 0 {
 		a := rp.GetInt(slot, "A")
 		b := rp.GetString(slot, "B")
@@ -65,11 +65,11 @@ func TestRecordPageInsertAndDelete(t *testing.T) {
 			fmt.Printf("slot %d: {%d, %s}\n", slot, a, b)
 			rp.Delete(slot)
 		}
-		slot = rp.InvalidAfterSlot(slot)
+		slot = rp.NextAfter(slot)
 	}
 	fmt.Printf("%d values under 25 were deleted.\n", count)
 	fmt.Println("Here are the remaining records")
-	slot = rp.InvalidAfterSlot(-1)
+	slot = rp.NextAfter(-1)
 	for slot >= 0 {
 		a := rp.GetInt(slot, "A")
 		b := rp.GetString(slot, "B")
@@ -77,7 +77,7 @@ func TestRecordPageInsertAndDelete(t *testing.T) {
 		require.Equal(t, a >= 25, true)
 
 		fmt.Printf("slot%d {%d, %s}\n", slot, a, b)
-		slot = rp.InvalidAfterSlot(slot)
+		slot = rp.NextAfter(slot)
 	}
 
 	tx1.Unpin(blk)

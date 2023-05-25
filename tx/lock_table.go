@@ -9,14 +9,14 @@ import (
 )
 
 const (
-	MAX_WAITING_TIME = 10 //3用于测试，正式使用时设置为10
+	MAX_WAITING_TIME = 3 //3用于测试，正式使用时设置为10
 )
 
 type LockTable struct {
 	lockMap    map[fm.BlockId]int64           //将锁与区块对应，互斥锁为-1，共享锁 > 0
 	notifyChan map[fm.BlockId]chan struct{}   //用于通知挂起的所有协程恢复执行的管道
 	notifyWg   map[fm.BlockId]*sync.WaitGroup //实现唤醒通知
-	mu         sync.Mutex
+	mu         sync.Mutex                     //实现函数调用的线程安全
 }
 
 var (
@@ -66,26 +66,26 @@ func (l *LockTable) waitingUntilTimeoutOrNotified(blk *fm.BlockId) {
 	l.mu.Unlock() //挂起之前释放方法锁
 	select {
 	case <-time.After(MAX_WAITING_TIME * time.Second):
-		fmt.Printf("%v routine wake up, timeout\n", *blk)
+		//fmt.Printf("%v routine wake up, timeout\n", *blk)
 	case <-l.notifyChan[*blk]:
-		fmt.Printf("%v routine wake up, notify\n", *blk)
+		//fmt.Printf("%v routine wake up, notify\n", *blk)
 	}
 	l.mu.Lock() //抢占锁
 }
 
 func (l *LockTable) notifyAll(blk *fm.BlockId) {
-	fmt.Printf("close channel for blk: %v\n", *blk)
+	//fmt.Printf("close channel for blk: %v\n", *blk)
 
 	channel, ok := l.notifyChan[*blk]
 	if !ok {
-		fmt.Printf("channel of %v is already closed\n", *blk)
+		//fmt.Printf("channel of %v is already closed\n", *blk)
 		return
 	}
 
 	close(channel)
 	delete(l.notifyChan, *blk)
 
-	time.Sleep(5 * time.Millisecond) //确保等待的协程都取消等待
+	time.Sleep(time.Millisecond) //确保等待的协程都取消等待
 
 	l.notifyChan[*blk] = make(chan struct{})
 
@@ -103,7 +103,6 @@ func (l *LockTable) notifyAll(blk *fm.BlockId) {
 func (l *LockTable) SLock(blk *fm.BlockId) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-
 	l.initWaitingBlock(blk)
 
 	start := time.Now()
@@ -126,7 +125,6 @@ func (l *LockTable) SLock(blk *fm.BlockId) error {
 func (l *LockTable) XLock(blk *fm.BlockId) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-
 	l.initWaitingBlock(blk)
 
 	start := time.Now()
@@ -171,11 +169,15 @@ func (l *LockTable) getLockVal(blk *fm.BlockId) int64 {
 }
 
 func (l *LockTable) hasXLock(blk *fm.BlockId) bool {
-	return l.getLockVal(blk) == -1
+	return l.getLockVal(blk) < 0
 }
 
 func (l *LockTable) hasOtherSLock(blk *fm.BlockId) bool {
-	return l.getLockVal(blk) > 0
+	/*
+		这里必须要大于1，因为同一个线程可以先获取读锁再获取写锁,同一个线程获取读锁时会让计数加1，
+		如果获取写锁时对应读锁的计数只有1，那意味着读锁就是本线程获得的，于是可以直接获得写锁
+	*/
+	return l.getLockVal(blk) > 1
 }
 
 func (l *LockTable) waitingTooLong(start time.Time) bool {
