@@ -2,6 +2,7 @@ package record_manager
 
 import (
 	fm "file_manager"
+	"fmt"
 	"tx"
 )
 
@@ -109,7 +110,8 @@ func (r *RecordPage) searchAfter(slot int, flag SLOT_FLAG) int {
 	for r.isValidSlot(slot) {
 		val, err := r.tx.GetInt(r.blk, r.slotOffset(slot))
 		if err != nil {
-			panic(err)
+			fmt.Printf("SearchAfter has err %v\n", err)
+			return -1
 		}
 
 		if SLOT_FLAG(val) == flag {

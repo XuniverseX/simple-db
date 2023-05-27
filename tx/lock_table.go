@@ -3,7 +3,6 @@ package tx
 import (
 	"errors"
 	fm "file_manager"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -107,16 +106,15 @@ func (l *LockTable) SLock(blk *fm.BlockId) error {
 
 	start := time.Now()
 	for l.hasXLock(blk) && !l.waitingTooLong(start) {
-		fmt.Println("get SLock fail and sleep")
+		//fmt.Println("get SLock fail and sleep")
 		l.waitingUntilTimeoutOrNotified(blk) //对应协程挂起给定的时间
 	}
 
 	if l.hasXLock(blk) {
-		fmt.Println("SLock failed because XLock on given blk")
+		//fmt.Println("SLock failed because XLock on given blk")
 		return errors.New("error: XLock on given blk")
 	}
 
-	//defer l.mu.Unlock()
 	val := l.getLockVal(blk)
 	l.lockMap[*blk] = val + 1
 	return nil
@@ -129,12 +127,12 @@ func (l *LockTable) XLock(blk *fm.BlockId) error {
 
 	start := time.Now()
 	for l.hasOtherSLock(blk) && !l.waitingTooLong(start) {
-		fmt.Println("get XLock fail and sleep")
+		//fmt.Println("get XLock fail and sleep")
 		l.waitingUntilTimeoutOrNotified(blk)
 	}
 
 	if l.hasOtherSLock(blk) {
-		fmt.Println("XLock failed because SLock on given blk")
+		//fmt.Println("XLock failed because SLock on given blk")
 		return errors.New("error: SLock on given blk")
 	}
 
@@ -152,7 +150,7 @@ func (l *LockTable) Unlock(blk *fm.BlockId) {
 		l.notifyAll(blk) //释放读锁也要notify
 	} else {
 		//通知所有等待给定区块的线程从Wait中恢复
-		fmt.Printf("unlock by blk: + %v\n", *blk)
+		//fmt.Printf("unlock by blk: + %v\n", *blk)
 		l.lockMap[*blk] = 0
 		l.notifyAll(blk)
 	}

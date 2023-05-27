@@ -34,7 +34,6 @@ func (b *BufferList) Pin(blk *fm.BlockId) error {
 
 	b.buffers[*blk] = buff
 	b.pins = append(b.pins, *blk)
-
 	return nil
 }
 
@@ -46,9 +45,9 @@ func (b *BufferList) Unpin(blk *fm.BlockId) {
 
 	b.bufferManager.Unpin(buff)
 
-	for i, blockId := range b.pins {
-		if blockId.Equal(blk) {
-			b.pins = append(b.pins[:i], b.pins[i+1:]...) //从数组中删除
+	for idx, pinnedBlk := range b.pins {
+		if pinnedBlk == *blk {
+			b.pins = append(b.pins[:idx], b.pins[idx+1:]...) //从数组中删除
 			break
 		}
 	}
